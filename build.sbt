@@ -6,7 +6,7 @@ import sbtghactions.JavaSpec
 val scala212               = "2.12.16"
 val scala213               = "2.13.8"
 val scala3                 = "3.1.1"
-val supportedScalaVersions = List(scala212, scala213, scala3)
+val supportedScalaVersions = List( /*scala212,*/ scala213 /*, scala3*/ )
 
 def priorTo2_13(scalaVersion: String): Boolean =
   CrossVersion.partialVersion(scalaVersion) match {
@@ -59,7 +59,13 @@ val commonSettings = Seq(
   Compile / doc / scalacOptions ++= Seq(
     "-no-link-warnings" // Suppresses problems with Scaladoc links
   ),
-  scalacOptions ++= (if (priorTo2_13(scalaVersion.value)) Seq("-Ypartial-unification") else Nil)
+  scalacOptions ++= (if (priorTo2_13(scalaVersion.value)) Seq("-Ypartial-unification") else Nil),
+  tpolecatCiModeOptions ~= { opts =>
+    opts.filterNot(
+      ScalacOptions.privateWarnUnusedOptions ++
+        ScalacOptions.warnUnusedOptions
+    )
+  }
 )
 
 val `mongo4cats-embedded` = project
@@ -95,6 +101,29 @@ val `mongo4cats-circe` = project
     test / parallelExecution := false,
     mimaPreviousArtifacts    := Set(organization.value %% moduleName.value % "0.4.1")
   )
+  .enablePlugins(AutomateHeaderPlugin)
+
+val `mongo4cats-bson-derivation` = project
+  .in(file("bson-derivation"))
+  .dependsOn(`mongo4cats-core`, `mongo4cats-embedded` % "test->compile")
+  .settings(commonSettings)
+  .settings(
+    name := "mongo4cats-bson-derivation",
+    libraryDependencies ++= Dependencies.circe ++ Dependencies.test,
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) =>
+          Dependencies.scalacheckShapeless ++
+            Dependencies.scalacheckCats ++
+            Dependencies.magnolia1_2 ++
+            Seq("org.scala-lang" % "scala-reflect" % scalaVersion.value)
+        case _ => Dependencies.magnolia1_3
+      }
+    },
+    test / parallelExecution := false,
+    mimaPreviousArtifacts    := Set(organization.value %% moduleName.value % "0.4.1")
+  )
+  .dependsOn(`mongo4cats-circe`)
   .enablePlugins(AutomateHeaderPlugin)
 
 val `mongo4cats-examples` = project
@@ -144,5 +173,6 @@ val root = project
     `mongo4cats-core`,
     `mongo4cats-circe`,
     `mongo4cats-examples`,
-    `mongo4cats-embedded`
+    `mongo4cats-embedded`,
+    `mongo4cats-bson-derivation`
   )
