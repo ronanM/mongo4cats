@@ -26,6 +26,13 @@ trait MidBsonEncoder {
   implicit val shortBsonEncoder: BsonEncoder[Short]   = BsonEncoder.instance(short => new BsonInt32(short.toInt))
   implicit val intBsonEncoder: BsonEncoder[Int]       = BsonEncoder.instance(new BsonInt32(_))
   implicit val longBsonEncoder: BsonEncoder[Long]     = BsonEncoder.instance(new BsonInt64(_))
+
   implicit val instantBsonEncoder: BsonEncoder[Instant] =
     BsonEncoder.instance(instant => new BsonDocument("$date", new BsonString(instant.toString)))
+
+  implicit val encodeObjectId: BsonEncoder[org.bson.types.ObjectId] = {
+    val dollarOid: String = s"$$oid"
+    BsonEncoder.instance(oid => new BsonDocument(dollarOid, new BsonString(oid.toHexString)))
+  }
+
 }

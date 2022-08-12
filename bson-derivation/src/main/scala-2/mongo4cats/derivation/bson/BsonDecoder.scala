@@ -17,11 +17,13 @@
 package mongo4cats.derivation.bson
 
 import cats.syntax.all._
+import mongo4cats.bson.ObjectId
 import org.bson.{BsonArray, BsonDocument, BsonInt32, BsonInt64, BsonNull, BsonString, BsonValue}
 
 import scala.jdk.CollectionConverters._
 import java.time.Instant
 import scala.collection.Factory
+import scala.util.Try
 
 /** A type class that provides a way to produce a value of type `A` from a [[org.bson.BsonValue]] value. */
 trait BsonDecoder[A] {
@@ -76,8 +78,17 @@ object BsonDecoder {
           case s: BsonString => Instant.parse(s.getValue).asRight
           case other         => new Throwable(s"Not a Instant: ${other}").asLeft
         }
-      // s.getValue.asRight.map(Instant.ofEpochMilli)
       case other => new Throwable(s"Not a Instant: ${other}").asLeft
+    }
+
+  implicit val decodeObjectId: BsonDecoder[org.bson.types.ObjectId] =
+    instance {
+      case s: BsonDocument =>
+        s.get("$oid") match {
+          case s: BsonString => new org.bson.types.ObjectId(s.getValue).asRight
+          case other         => new Throwable(s"Not a ObjectId: ${other}").asLeft
+        }
+      case other => new Throwable(s"Not a ObjectId: ${other}").asLeft
     }
 
   implicit def iterableBsonDecoder[L[_], A](implicit decA: BsonDecoder[A], factory: Factory[A, L[A]]): BsonDecoder[L[A]] =

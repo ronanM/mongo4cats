@@ -16,26 +16,6 @@
 
 package mongo4cats.derivation.bson
 
-import cats.syntax.all._
-import io.circe._
-import io.circe.generic.auto._
+import scala.annotation.StaticAnnotation
 
-final case class Person(
-    name: String,
-    age: Option[Int]
-)
-
-object MainBidon extends MidBsonEncoder {
-
-  def main(args: Array[String]): Unit = {
-    import mongo4cats.derivation.bson.derivation.encoder.auto._
-
-    implicitly[BsonEncoder[String]]
-    implicitly[BsonEncoder[Int]]
-
-    println(BsonEncoder[Person].apply(Person("toto", 10.some)))
-    println(BsonEncoder[Person].apply(Person("toto", none)))
-    println(Encoder[Person].apply(Person("toto", 10.some)))
-    println(Encoder[Person].apply(Person("toto", none)))
-  }
-}
+final case class BsonKey(value: String) extends StaticAnnotation

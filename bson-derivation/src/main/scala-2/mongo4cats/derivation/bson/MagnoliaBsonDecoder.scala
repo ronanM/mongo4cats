@@ -29,7 +29,7 @@ private[bson] object MagnoliaBsonDecoder {
   )(implicit configuration: Configuration): BsonDecoder[T] = {
     val paramJsonKeyLookup: Map[String, String] =
       caseClass.parameters.map { p =>
-        val jsonKeyAnnotation = p.annotations.collectFirst { case ann: JsonKey => ann }
+        val jsonKeyAnnotation = p.annotations.collectFirst { case ann: BsonKey => ann }
 
         jsonKeyAnnotation match {
           case Some(ann) => p.label -> ann.value

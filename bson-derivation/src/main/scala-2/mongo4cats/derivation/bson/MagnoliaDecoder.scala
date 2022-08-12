@@ -28,7 +28,7 @@ private[bson] object MagnoliaDecoder {
       caseClass: CaseClass[Decoder, T]
   )(implicit configuration: Configuration): Decoder[T] = {
     val paramJsonKeyLookup: Map[String, String] = caseClass.parameters.map { p =>
-      val jsonKeyAnnotation = p.annotations.collectFirst { case ann: JsonKey =>
+      val jsonKeyAnnotation = p.annotations.collectFirst { case ann: BsonKey =>
         ann
       }
       jsonKeyAnnotation match {
@@ -66,16 +66,17 @@ private[bson] object MagnoliaDecoder {
     } else {
       new Decoder[T] {
         def apply(c: HCursor): Result[T] =
-          caseClass.constructEither { p =>
-            p.typeclass.tryDecode(
-              c.downField(
-                paramJsonKeyLookup.getOrElse(
-                  p.label,
-                  throw new IllegalStateException("Looking up a parameter label should always yield a value. This is a bug")
+          caseClass
+            .constructEither { p =>
+              p.typeclass.tryDecode(
+                c.downField(
+                  paramJsonKeyLookup.getOrElse(
+                    p.label,
+                    throw new IllegalStateException("Looking up a parameter label should always yield a value. This is a bug")
+                  )
                 )
               )
-            )
-          }
+            }
             .leftMap(_.head)
       }
     }

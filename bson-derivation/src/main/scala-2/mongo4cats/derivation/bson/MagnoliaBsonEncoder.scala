@@ -25,7 +25,7 @@ private[bson] object MagnoliaBsonEncoder {
   private[bson] def join[T](caseClass: CaseClass[BsonEncoder, T])(implicit config: Configuration): BsonEncoder[T] = {
     val paramJsonKeyLookup =
       caseClass.parameters.map { p =>
-        val jsonKeyAnnotation = p.annotations.collectFirst { case ann: JsonKey => ann }
+        val jsonKeyAnnotation = p.annotations.collectFirst { case ann: BsonKey => ann }
 
         jsonKeyAnnotation match {
           case Some(ann) => p.label -> ann.value
