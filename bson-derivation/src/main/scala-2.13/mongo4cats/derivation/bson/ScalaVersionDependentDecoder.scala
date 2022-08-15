@@ -25,15 +25,12 @@ import java.time.Instant
 import scala.collection.Factory
 import scala.util.Try
 
-
 trait ScalaVersionDependentDecoder {
-
 
   implicit def iterableBsonDecoder[L[_], A](implicit decA: BsonDecoder[A], factory: Factory[A, L[A]]): BsonDecoder[L[A]] =
     instance {
       case vs: BsonArray => vs.getValues.asScala.toList.traverse(decA(_)).map(_.to(factory))
-      case other => new Throwable(s"Not a Iterable: ${other}").asLeft
+      case other         => new Throwable(s"Not a Iterable: ${other}").asLeft
     }
 
 }
-

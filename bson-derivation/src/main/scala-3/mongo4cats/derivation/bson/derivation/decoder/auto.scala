@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-package mongo4cats.derivation.bson.configured.encoder
+package mongo4cats.derivation.bson.derivation.decoder
 
-import io.circe.Encoder
-import mongo4cats.derivation.bson.{BsonEncoder, MagnoliaBsonEncoder}
+import mongo4cats.derivation.bson.{BsonDecoder, MagnoliaBsonDecoder}
 import mongo4cats.derivation.bson.configured.Configuration
-import magnolia1.{CaseClass, Magnolia, SealedTrait}
+import magnolia1.{CaseClass, SealedTrait}
 
-object semiauto {
+object auto {
 
-  type Typeclass[T] = BsonEncoder[T]
+  type Typeclass[T] = BsonDecoder[T]
 
-  def join[T](caseClass: CaseClass[Typeclass, T])(implicit configuration: Configuration): Typeclass[T] =
-    MagnoliaBsonEncoder.join(caseClass)
+  def join[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] =
+    MagnoliaBsonDecoder.join(caseClass)(Configuration.default)
 
-  def split[T](sealedTrait: SealedTrait[Typeclass, T])(implicit configuration: Configuration): Typeclass[T] =
-    MagnoliaBsonEncoder.split(sealedTrait)
+  def split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] =
+    MagnoliaBsonDecoder.split(sealedTrait)(Configuration.default)
 
-  def magnoliaConfiguredEncoder[T]: Typeclass[T] = macro Magnolia.gen[T]
+  // given magnoliaBsonDecoder[T]: Typeclass[T] = BsonDecoder.derived
 }

@@ -17,7 +17,7 @@
 package mongo4cats.derivation.bson.configured.encoder
 
 import io.circe.Encoder
-import mongo4cats.derivation.bson.{BsonEncoder, MagnoliaBsonEncoder, MagnoliaEncoder}
+import mongo4cats.derivation.bson.{BsonEncoder, MagnoliaBsonEncoder}
 import mongo4cats.derivation.bson.configured.Configuration
 import magnolia1.{CaseClass, Magnolia, SealedTrait}
 

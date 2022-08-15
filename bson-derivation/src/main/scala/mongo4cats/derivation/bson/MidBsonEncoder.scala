@@ -15,7 +15,7 @@
  */
 
 package mongo4cats.derivation.bson
-import org.bson.{BsonDocument, BsonInt32, BsonInt64, BsonString}
+import org.bson.{BsonDocument, BsonInt32, BsonInt64, BsonNull, BsonString}
 
 import java.time.Instant
 

@@ -19,9 +19,9 @@ package mongo4cats.derivation.bson.configured.encoder
 import io.circe.Encoder
 import mongo4cats.derivation.bson.{BsonEncoder, MagnoliaBsonEncoder}
 import mongo4cats.derivation.bson.configured.Configuration
-import magnolia1.{CaseClass, Magnolia, SealedTrait}
+import magnolia1.{CaseClass, SealedTrait}
 
-object semiauto {
+object auto {
 
   type Typeclass[T] = BsonEncoder[T]
 
@@ -31,5 +31,5 @@ object semiauto {
   def split[T](sealedTrait: SealedTrait[Typeclass, T])(implicit configuration: Configuration): Typeclass[T] =
     MagnoliaBsonEncoder.split(sealedTrait)
 
-  def magnoliaConfiguredEncoder[T]: Typeclass[T] = macro Magnolia.gen[T]
+  // given magnoliaConfiguredEncoder[T]: Typeclass[T] = BsonEncoder.derived
 }

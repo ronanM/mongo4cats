@@ -22,7 +22,6 @@ import org.bson.{BsonArray, BsonDocument, BsonInt32, BsonInt64, BsonNull, BsonSt
 
 import scala.jdk.CollectionConverters._
 import java.time.Instant
-import scala.collection.Factory
 import scala.util.Try
 
 /** A type class that provides a way to produce a value of type `A` from a [[org.bson.BsonValue]] value. */
@@ -92,8 +91,15 @@ object BsonDecoder extends ScalaVersionDependentDecoder {
     }
 
   implicit def optionBsonDecoder[A](implicit decA: BsonDecoder[A]): BsonDecoder[Option[A]] =
+    instance(a =>
+      if (a == null || a.isNull) none.asRight
+      else decA(a).map(_.some)
+    )
+
+  implicit def tuple2BsonDecoder[A, B](implicit decA: BsonDecoder[A], decB: BsonDecoder[B]): BsonDecoder[(A, B)] =
     instance {
-      case _: BsonNull => none.asRight
-      case bsonValue   => decA(bsonValue).map(_.some)
+      case arr: BsonArray if arr.size() == 2 => (decA(arr.get(0)), decB(arr.get(1))).tupled
+      case arr: BsonArray                    => new Throwable(s"Not an array of size 2: ${arr}").asLeft
+      case other                             => new Throwable(s"Not an array: ${other}").asLeft
     }
 }

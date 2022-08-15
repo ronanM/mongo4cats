@@ -6,7 +6,7 @@ import sbtghactions.JavaSpec
 val scala212               = "2.12.16"
 val scala213               = "2.13.8"
 val scala3                 = "3.1.1"
-val supportedScalaVersions = List( /*scala212,*/ scala213 /*, scala3*/ )
+val supportedScalaVersions = List(scala212, scala213, scala3)
 
 def priorTo2_13(scalaVersion: String): Boolean =
   CrossVersion.partialVersion(scalaVersion) match {
@@ -110,18 +110,23 @@ val `mongo4cats-bson-derivation` = project
   .settings(
     name := "mongo4cats-bson-derivation",
     libraryDependencies ++= Dependencies.circe ++ Dependencies.test,
-    libraryDependencies ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) =>
-          Dependencies.scalacheckShapeless ++
-            Dependencies.scalacheckCats ++
-            Dependencies.magnolia1_2 ++
-            Seq("org.scala-lang" % "scala-reflect" % scalaVersion.value)
-        case _ => Dependencies.magnolia1_3
-      }
-    },
+    libraryDependencies ++=
+      Dependencies.scalacheckCats ++
+        (CrossVersion.partialVersion(scalaVersion.value) match {
+          case Some((2, _)) =>
+            Dependencies.circeGenericExtras ++
+              Dependencies.scalacheckShapeless ++
+              Dependencies.magnolia1_2 ++
+              Seq("org.scala-lang" % "scala-reflect" % scalaVersion.value)
+          case _ => Dependencies.magnolia1_3
+        }),
     test / parallelExecution := false,
-    mimaPreviousArtifacts    := Set(organization.value %% moduleName.value % "0.4.1")
+    mimaPreviousArtifacts    := Set(organization.value %% moduleName.value % "0.4.1"),
+    scalacOptions ++=
+      (CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3, _)) => Seq("-Yretain-trees") // For Magnolia: https://github.com/softwaremill/magnolia#limitations
+        case _            => Nil
+      })
   )
   .dependsOn(`mongo4cats-circe`)
   .enablePlugins(AutomateHeaderPlugin)

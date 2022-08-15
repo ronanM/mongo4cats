@@ -10,7 +10,7 @@ object Dependencies {
     val logback             = "1.2.11"
     val scalaTest           = "3.2.12"
     val scalaTestScalaCheck = "3.2.13.0"
-    val scalaCheck          = "1.14.1"
+    val scalaCheck          = "1.16.0"
 
     val embeddedMongo   = "3.4.5"
     val immutableValue  = "2.9.0"
@@ -64,8 +64,7 @@ object Dependencies {
     Libraries.logback             % Test,
     Libraries.scalaTest           % Test,
     Libraries.scalaTestScalaCheck % Test,
-    Libraries.scalaCheck          % Test,
-    Libraries.scalacheckShapeless % Test
+    Libraries.scalaCheck          % Test
   )
 
   lazy val examples = Seq(
@@ -75,8 +74,11 @@ object Dependencies {
   lazy val circe = Seq(
     Libraries.circeCore,
     Libraries.circeGeneric,
-    Libraries.circeGenericExtras,
     Libraries.circeParser
+  )
+
+  lazy val circeGenericExtras = Seq(
+    Libraries.circeGenericExtras
   )
 
   lazy val embedded = Seq(
@@ -95,7 +97,7 @@ object Dependencies {
   )
 
   lazy val scalacheckShapeless = Seq(
-    Libraries.scalacheckShapeless
+    Libraries.scalacheckShapeless % Test
   )
 
   lazy val scalacheckCats = Seq(

@@ -37,23 +37,27 @@ trait BsonEncoder[A] extends Serializable with AsJava { self =>
   }
 }
 
-object BsonEncoder extends MidBsonEncoder {
+object BsonEncoder extends ScalaVersionDependentEncoder with MidBsonEncoder with AsJava {
 
   def apply[A](implicit ev: BsonEncoder[A]): BsonEncoder[A] = ev
 
   def instance[A](f: A => BsonValue): BsonEncoder[A] = (a: A) => f(a)
 
-  implicit final def encodeOption[A](implicit encA: BsonEncoder[A]): BsonEncoder[Option[A]] = new BsonEncoder[Option[A]] {
-    final def apply(a: Option[A]): BsonValue = a match {
+  implicit final def encodeOption[A](implicit encA: BsonEncoder[A]): BsonEncoder[Option[A]] =
+    instance {
       case Some(v) => encA(v)
       case None    => org.bson.BsonNull.VALUE
     }
-  }
 
-  implicit final def encodeList[L[_] <: Iterable[_], A](implicit encA: BsonEncoder[A]): BsonEncoder[L[A]] = new BsonEncoder[L[A]] {
-    final def apply(as: L[A]): BsonValue = as match {
-      case asIt: Iterable[A] @unchecked => new BsonArray(asJava(asIt.toList.map(encA.apply(_: A))))
-      case _                            => throw new Throwable("Not an Iterable")
+  implicit final def encodeSeq[L[_] <: Seq[_], A](implicit encA: BsonEncoder[A]): BsonEncoder[L[A]] =
+    instance {
+      case asSeq: Seq[A] @unchecked =>
+        val arrayList = new java.util.ArrayList[BsonValue](asSeq.size)
+        asSeq.foreach(a => arrayList.add(encA(a)))
+        new BsonArray(arrayList)
+      case _ => throw new Throwable("Not a Seq")
     }
-  }
+
+  implicit final def tuple2BsonEncoder[A, B](implicit encA: BsonEncoder[A], encB: BsonEncoder[B]): BsonEncoder[(A, B)] =
+    instance { case (a, b) => new BsonArray(java.util.List.of(encA(a), encB(b))) }
 }

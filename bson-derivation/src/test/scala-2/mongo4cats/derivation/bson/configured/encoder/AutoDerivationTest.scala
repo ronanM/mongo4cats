@@ -28,7 +28,7 @@ import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import org.scalacheck.ScalacheckShapeless._
 import mongo4cats.derivation.bson
 import mongo4cats.circe._
-import org.bson.BsonValue
+import org.bson.{BsonDocument, BsonValue}
 import io.circe.generic.extras.auto._
 import mongo4cats.derivation.bson
 import mongo4cats.derivation.bson.configured.encoder.auto._
@@ -42,6 +42,7 @@ final case class RootTestData(
     listItems: List[ItemTestData],
     setItems: Set[ItemTestData],
     optionItem: Option[ItemTestData]
+    // tuple2: (String, Int)
     // mapIntItems: Map[Int, ItemTestData],
 )
 
@@ -71,13 +72,13 @@ object TestSealedTrait {
   final case class CC2(int: Option[Int] = 44.some, long: Long)     extends TestSealedTrait
   final case class CC3(
       byte: Byte,
-      short: Short
-      // longInt: (Long, Int)
-      // strOpt: Option[(String, Int)]
+      short: Short,
+      tuple2: (Long, Int)
+      // tuple2Opt: Option[(String, Int)]
+      // tuple2OptWithDefault: Option[(String, Int)] = ("ten", 42).some
   ) extends TestSealedTrait
 }
 
-// $ sbt ++2.13.8 "~mongo4cats-bson-derivation/test"
 class AutoDerivationTest extends AnyWordSpec with ScalaCheckDrivenPropertyChecks {
 
   // implicitly[Arbitrary[String]]
@@ -87,10 +88,7 @@ class AutoDerivationTest extends AnyWordSpec with ScalaCheckDrivenPropertyChecks
     Arbitrary((Gen.choose(0, 16777215), Gen.choose(0, 16777215)).mapN(new org.bson.types.ObjectId(_, _)))
 
   implicit val shortStringArb: Arbitrary[String] =
-    Arbitrary(Gen.choose(0, 5).flatMap(Gen.resize(_, Gen.alphaNumStr)))
-
-  implicit def notTooBigIterable[L[_], A](implicit arbA: Arbitrary[L[A]]): Arbitrary[L[A]] =
-    Arbitrary(Gen.choose(0, 3).flatMap(Gen.resize(_, arbA.arbitrary)))
+    Arbitrary(Gen.choose(0, 5).flatMap(Gen.stringOfN(_, Gen.alphaChar)))
 
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration(minSuccessful = 1000)
@@ -140,22 +138,26 @@ class AutoDerivationTest extends AnyWordSpec with ScalaCheckDrivenPropertyChecks
         // implicitly[Decoder[Option[Int]]]
         // implicitly[Encoder[Option[Int]]]
 
-        // implicitly[BsonEncoder[Option[Int]]]
+        // implicitly[BsonEncoder[List[Int]]]
+        implicitly[BsonEncoder[Option[Int]]]
+        implicitly[BsonEncoder[Option[(Int, String)]]]
         // implicitly[BsonDecoder[Option[Int]]]
 
+        // --- Encode ---
         // if (PRINTLN) println(s"\n---\nScala: $p")
         if (PRINTLN) println("\n" * 10 + "-----------------------------------")
         val circeJson: Json      = testData.asJson
         val circeJsonStr: String = circeJson.noSpaces
         if (PRINTLN) println(s"${prefix}With Circe: $circeJsonStr")
 
-        val bson: BsonValue = BsonEncoder[RootTestData].apply(testData)
-        if (PRINTLN) println(s"${prefix}With Bson    : $bson")
+        val bsonDoc: BsonDocument = BsonEncoder[RootTestData].apply(testData).asInstanceOf[BsonDocument]
+        if (PRINTLN) println(s"${prefix}With Bson    : $bsonDoc")
 
-        val bsonStr: String = bson.toString.replace("\": ", "\":").replace(", ", ",")
+        val bsonStr: String = bsonDoc.toJson().replace("\": ", "\":").replace(", ", ",")
         if (PRINTLN) println(s"${prefix}Bson Str: $bsonStr\n---\nJson Str: $circeJsonStr")
         assert(bsonStr == circeJsonStr, ", 10) Json String from Bson != Json String from Circe")
 
+        // --- Decode ---
         val jsonFromBsonStrEither: Either[ParsingFailure, Json] = io.circe.parser.parse(bsonStr)
         if (PRINTLN) println(s"${prefix}Bson -> Json, then parsed with Circe: ${jsonFromBsonStrEither.map(_.noSpaces)}")
         if (PRINTLN) println(s"${prefix}Circe Json                          : ${circeJsonStr.asRight}")
@@ -163,9 +165,8 @@ class AutoDerivationTest extends AnyWordSpec with ScalaCheckDrivenPropertyChecks
         assert(jsonFromBsonStrEither.isRight, ", 20) Can't be JsonDecoded")
         assert(jsonFromBsonStrEither == circeJson.asRight, ", 30) Json Decoded != Circe Json Encoded")
 
-        val decodedFromBsonEither =
-          BsonDecoder[RootTestData].apply(if (false && bsonConf.useDefaults && dropNulls) bson.deepDropNullValues else bson)
-        val expected = (if (true || circeConf.useDefaults && dropNulls) circeJson.deepDropNullValues else circeJson).as[RootTestData]
+        val decodedFromBsonEither = BsonDecoder[RootTestData].apply(if (dropNulls) bsonDoc.deepDropNullValues else bsonDoc)
+        val expected              = (if (circeConf.useDefaults || dropNulls) circeJson.deepDropNullValues else circeJson).as[RootTestData]
 
         if (PRINTLN) println(s"${prefix}    Bson Decoded: $decodedFromBsonEither")
         if (PRINTLN) println(s"${prefix}Expected Decoded: $expected")
