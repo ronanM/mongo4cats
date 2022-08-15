@@ -57,7 +57,7 @@ private[bson] object MagnoliaBsonDecoder {
                 case doc: BsonDocument =>
                   val value: BsonValue = doc.get(key)
 
-                  if (value.isNull) {
+                  if (value == null || value.isNull) {
                     p.default.fold(
                       // Some decoders (in particular, the default Option[T] decoder) do special things when a key is missing,
                       // so we give them a chance to do their thing here.
@@ -91,7 +91,8 @@ private[bson] object MagnoliaBsonDecoder {
                     )
                 )
                 .leftMap(_.head)
-            case other => throw new IllegalStateException(s"Not BsonDocument: ${other}")
+            case other => throw new IllegalStateException(s"""|Not BsonDocument: $other
+                 |Type: ${caseClass.typeName.full}""".stripMargin)
           }
       }
     }

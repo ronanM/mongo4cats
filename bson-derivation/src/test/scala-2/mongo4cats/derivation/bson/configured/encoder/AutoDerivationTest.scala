@@ -23,7 +23,7 @@ import org.scalacheck._
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalacheck.cats.implicits._
 import io.circe.syntax._
-import mongo4cats.derivation.bson.{BsonDecoder, BsonEncoder}
+import mongo4cats.derivation.bson.{BsonDecoder, BsonEncoder, BsonValueOps}
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import org.scalacheck.ScalacheckShapeless._
 import mongo4cats.derivation.bson
@@ -122,53 +122,55 @@ class AutoDerivationTest extends AnyWordSpec with ScalaCheckDrivenPropertyChecks
           .copy(discriminator = none)
       )
 
-    forAll(Arbitrary.arbitrary[RootTestData], bsonConfigurationGen) { case (testData, bsonConfiguration) =>
-      // println(bsonConfigurationGen)
+    forAll(Arbitrary.arbitrary[RootTestData], bsonConfigurationGen, Gen.oneOf(false, true)) {
+      case (testData, bsonConfiguration, dropNulls) =>
+        // println(bsonConfigurationGen)
 
-      implicit val bsonConf: mongo4cats.derivation.bson.configured.Configuration =
-        bsonConfiguration
+        implicit val bsonConf: mongo4cats.derivation.bson.configured.Configuration =
+          bsonConfiguration
 
-      implicit val circeConf: io.circe.generic.extras.Configuration =
-        io.circe.generic.extras.Configuration(
-          transformMemberNames = bsonConf.transformMemberNames,
-          transformConstructorNames = bsonConf.transformConstructorNames,
-          useDefaults = bsonConf.useDefaults,
-          discriminator = bsonConf.discriminator
-        )
+        implicit val circeConf: io.circe.generic.extras.Configuration =
+          io.circe.generic.extras.Configuration(
+            transformMemberNames = bsonConf.transformMemberNames,
+            transformConstructorNames = bsonConf.transformConstructorNames,
+            useDefaults = bsonConf.useDefaults,
+            discriminator = bsonConf.discriminator
+          )
 
-      // implicitly[Decoder[Option[Int]]]
-      // implicitly[Encoder[Option[Int]]]
+        // implicitly[Decoder[Option[Int]]]
+        // implicitly[Encoder[Option[Int]]]
 
-      // implicitly[BsonEncoder[Option[Int]]]
-      // implicitly[BsonDecoder[Option[Int]]]
+        // implicitly[BsonEncoder[Option[Int]]]
+        // implicitly[BsonDecoder[Option[Int]]]
 
-      // if (PRINTLN) println(s"\n---\nScala: $p")
-      if (PRINTLN) println("\n" * 10 + "-----------------------------------")
-      val circeJson: Json      = testData.asJson
-      val circeJsonStr: String = circeJson.noSpaces
-      if (PRINTLN) println(s"${prefix}With Circe: $circeJsonStr")
+        // if (PRINTLN) println(s"\n---\nScala: $p")
+        if (PRINTLN) println("\n" * 10 + "-----------------------------------")
+        val circeJson: Json      = testData.asJson
+        val circeJsonStr: String = circeJson.noSpaces
+        if (PRINTLN) println(s"${prefix}With Circe: $circeJsonStr")
 
-      val bson: BsonValue = BsonEncoder[RootTestData].apply(testData)
-      if (PRINTLN) println(s"${prefix}With Bson    : $bson")
+        val bson: BsonValue = BsonEncoder[RootTestData].apply(testData)
+        if (PRINTLN) println(s"${prefix}With Bson    : $bson")
 
-      val bsonStr: String = bson.toString.replace("\": ", "\":").replace(", ", ",")
-      if (PRINTLN) println(s"${prefix}Bson Str: $bsonStr\n---\nJson Str: $circeJsonStr")
-      assert(bsonStr == circeJsonStr, ", 10) Json String from Bson != Json String from Circe")
+        val bsonStr: String = bson.toString.replace("\": ", "\":").replace(", ", ",")
+        if (PRINTLN) println(s"${prefix}Bson Str: $bsonStr\n---\nJson Str: $circeJsonStr")
+        assert(bsonStr == circeJsonStr, ", 10) Json String from Bson != Json String from Circe")
 
-      val jsonFromBsonStrEither: Either[ParsingFailure, Json] = io.circe.parser.parse(bsonStr)
-      if (PRINTLN) println(s"${prefix}Bson -> Json, then parsed with Circe: ${jsonFromBsonStrEither.map(_.noSpaces)}")
-      if (PRINTLN) println(s"${prefix}Circe Json                          : ${circeJsonStr.asRight}")
+        val jsonFromBsonStrEither: Either[ParsingFailure, Json] = io.circe.parser.parse(bsonStr)
+        if (PRINTLN) println(s"${prefix}Bson -> Json, then parsed with Circe: ${jsonFromBsonStrEither.map(_.noSpaces)}")
+        if (PRINTLN) println(s"${prefix}Circe Json                          : ${circeJsonStr.asRight}")
 
-      assert(jsonFromBsonStrEither.isRight, ", 20) Can't be JsonDecoded")
-      assert(jsonFromBsonStrEither == circeJson.asRight, ", 30) Json Decoded != Circe Json Encoded")
+        assert(jsonFromBsonStrEither.isRight, ", 20) Can't be JsonDecoded")
+        assert(jsonFromBsonStrEither == circeJson.asRight, ", 30) Json Decoded != Circe Json Encoded")
 
-      val decodedFromBsonEither = BsonDecoder[RootTestData].apply(bson)
-      val expected              = circeJson.deepDropNullValues.as[RootTestData]
+        val decodedFromBsonEither =
+          BsonDecoder[RootTestData].apply(if (false && bsonConf.useDefaults && dropNulls) bson.deepDropNullValues else bson)
+        val expected = (if (true || circeConf.useDefaults && dropNulls) circeJson.deepDropNullValues else circeJson).as[RootTestData]
 
-      if (PRINTLN) println(s"${prefix}    Bson Decoded: $decodedFromBsonEither")
-      if (PRINTLN) println(s"${prefix}Expected Decoded: $expected")
+        if (PRINTLN) println(s"${prefix}    Bson Decoded: $decodedFromBsonEither")
+        if (PRINTLN) println(s"${prefix}Expected Decoded: $expected")
 
-      assert(decodedFromBsonEither == expected, ", 40) BsonDecoder != Circe Decoder")
+        assert(decodedFromBsonEither == expected, ", 40) BsonDecoder != Circe Decoder")
     }
   }
 }
