@@ -32,11 +32,10 @@ import org.scalacheck.cats.implicits._
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 
+import java.util.UUID
+
 final case class RootTestData(
-    rootTuple2Opt: Option[(String, Int)],
-    rootTuple2OptWithDefault: Option[(String, Int)] = ("toto", 10).some,
-    int: Option[Int] = 42.some,
-    testSealedTrait: TestSealedTrait,
+    testSealedTraits: List[TestSealedTrait],
     items: List[ItemTestDatas],
     rootTuple2: (String, Int)
 )
@@ -71,15 +70,18 @@ object TestSealedTrait {
   final case class CC1(
       objId: org.bson.types.ObjectId,
       string: String,
-      instant: java.time.Instant
+      instant: java.time.Instant,
+      map: Map[String, (Int, java.time.Instant)]
   ) extends TestSealedTrait
   final case class CC2(
+      uuid: UUID,
       int: Option[Int] = 44.some,
       long: Long
   ) extends TestSealedTrait
   final case class CC3(
       byte: Byte,
       short: Short,
+      int: Option[Int] = 42.some,
       tuple2: (Long, Int),
       tuple2Opt: Option[(String, Int)],
       tuple2OptWithDefault: Option[(String, Int)] = ("ten", 42).some

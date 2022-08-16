@@ -21,6 +21,7 @@ import mongo4cats.derivation.bson.BsonDecoder.instance
 import org.bson._
 
 import java.time.Instant
+import java.util.UUID
 
 trait AllBsonDecoders extends ScalaVersionDependentBsonDecoders {
 
@@ -81,6 +82,28 @@ trait AllBsonDecoders extends ScalaVersionDependentBsonDecoders {
       case arr: BsonArray if arr.size() == 2 => (decA(arr.get(0)), decB(arr.get(1))).tupled
       case arr: BsonArray                    => new Throwable(s"Not an array of size 2: ${arr}").asLeft
       case other                             => new Throwable(s"Not an array: ${other}").asLeft
+    }
+
+  implicit val uuidBsonDecoder: BsonDecoder[UUID] =
+    instance {
+      case s: BsonString => Either.catchNonFatal(UUID.fromString(s.getValue))
+      case other         => new Throwable(s"Not an UUID: ${other}").asLeft
+    }
+
+  implicit def mapBsonDecoder[K, V](implicit decK: KeyBsonDecoder[K], decV: BsonDecoder[V]): BsonDecoder[Map[K, V]] =
+    instance {
+      case doc: BsonDocument =>
+        var mapBuilder = scala.collection.mutable.LinkedHashMap[K, V]()
+
+        doc
+          .entrySet()
+          .forEach { entry =>
+            mapBuilder += (decK(entry.getKey).get -> decV(entry.getValue).toOption.get)
+            ()
+          }
+        mapBuilder.toMap.asRight
+
+      case other => new Throwable(s"Not a Document: ${other}").asLeft
     }
 }
 

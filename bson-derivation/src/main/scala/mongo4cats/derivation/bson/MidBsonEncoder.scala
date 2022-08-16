@@ -19,6 +19,7 @@ import mongo4cats.derivation.bson.BsonEncoder.instance
 import org.bson.{BsonArray, BsonDocument, BsonInt32, BsonInt64, BsonNull, BsonObjectId, BsonString, BsonValue}
 
 import java.time.Instant
+import java.util.UUID
 
 trait MidBsonEncoder {
 
@@ -51,4 +52,14 @@ trait MidBsonEncoder {
 
   implicit def tuple2BsonEncoder[A, B](implicit encA: BsonEncoder[A], encB: BsonEncoder[B]): BsonEncoder[(A, B)] =
     instance { case (a, b) => new BsonArray(java.util.List.of(encA(a), encB(b))) }
+
+  implicit val uuidBsonEncoder: BsonEncoder[UUID] =
+    instance(uuid => new BsonString(uuid.toString))
+
+  implicit def mapBsonEncoder[K, V](implicit encK: KeyBsonEncoder[K], encV: BsonEncoder[V]): BsonEncoder[Map[K, V]] =
+    instance { kvs =>
+      val bsonDocument = new BsonDocument(kvs.size)
+      kvs.foreach { case (k, v) => bsonDocument.append(encK(k), encV(v)) }
+      bsonDocument
+    }
 }
