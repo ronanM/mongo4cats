@@ -21,9 +21,7 @@ import mongo4cats.derivation.bson.BsonDecoder.instance
 import org.bson.BsonArray
 
 import scala.jdk.CollectionConverters._
-import java.time.Instant
 import scala.collection.Factory
-import scala.util.Try
 
 trait ScalaVersionDependentBsonDecoders {
 

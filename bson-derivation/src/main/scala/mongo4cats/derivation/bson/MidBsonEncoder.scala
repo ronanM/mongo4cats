@@ -16,7 +16,7 @@
 
 package mongo4cats.derivation.bson
 import mongo4cats.derivation.bson.BsonEncoder.instance
-import org.bson.{BsonArray, BsonDocument, BsonInt32, BsonInt64, BsonNull, BsonObjectId, BsonString, BsonValue}
+import org.bson.{BsonArray, BsonDocument, BsonInt32, BsonInt64, BsonObjectId, BsonString, BsonValue}
 
 import java.time.Instant
 import java.util.UUID

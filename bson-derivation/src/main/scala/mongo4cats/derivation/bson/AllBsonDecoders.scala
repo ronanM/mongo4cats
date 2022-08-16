@@ -93,7 +93,7 @@ trait AllBsonDecoders extends ScalaVersionDependentBsonDecoders {
   implicit def mapBsonDecoder[K, V](implicit decK: KeyBsonDecoder[K], decV: BsonDecoder[V]): BsonDecoder[Map[K, V]] =
     instance {
       case doc: BsonDocument =>
-        var mapBuilder = scala.collection.mutable.LinkedHashMap[K, V]()
+        val mapBuilder = scala.collection.mutable.LinkedHashMap[K, V]()
 
         doc
           .entrySet()
