@@ -15,24 +15,40 @@
  */
 
 package mongo4cats.derivation.bson
-import org.bson.{BsonDocument, BsonInt32, BsonInt64, BsonNull, BsonString}
+import mongo4cats.derivation.bson.BsonEncoder.instance
+import org.bson.{BsonArray, BsonDocument, BsonInt32, BsonInt64, BsonNull, BsonObjectId, BsonString, BsonValue}
 
 import java.time.Instant
 
 trait MidBsonEncoder {
 
-  implicit val stringBsonEncoder: BsonEncoder[String] = BsonEncoder.instance(new BsonString(_))
-  implicit val byteBsonEncoder: BsonEncoder[Byte]     = BsonEncoder.instance(byte => new BsonInt32(byte.toInt))
-  implicit val shortBsonEncoder: BsonEncoder[Short]   = BsonEncoder.instance(short => new BsonInt32(short.toInt))
-  implicit val intBsonEncoder: BsonEncoder[Int]       = BsonEncoder.instance(new BsonInt32(_))
-  implicit val longBsonEncoder: BsonEncoder[Long]     = BsonEncoder.instance(new BsonInt64(_))
+  implicit val stringBsonEncoder: BsonEncoder[String] = instance(new BsonString(_))
+  implicit val byteBsonEncoder: BsonEncoder[Byte]     = instance(byte => new BsonInt32(byte.toInt))
+  implicit val shortBsonEncoder: BsonEncoder[Short]   = instance(short => new BsonInt32(short.toInt))
+  implicit val intBsonEncoder: BsonEncoder[Int]       = instance(new BsonInt32(_))
+  implicit val longBsonEncoder: BsonEncoder[Long]     = instance(new BsonInt64(_))
 
   implicit val instantBsonEncoder: BsonEncoder[Instant] =
-    BsonEncoder.instance(instant => new BsonDocument("$date", new BsonString(instant.toString)))
+    instance(instant => new BsonDocument("$date", new BsonString(instant.toString)))
 
-  implicit val encodeObjectId: BsonEncoder[org.bson.types.ObjectId] = {
-    val dollarOid: String = s"$$oid"
-    BsonEncoder.instance(oid => new BsonDocument(dollarOid, new BsonString(oid.toHexString)))
-  }
+  implicit val encodeBsonObjectId: BsonEncoder[org.bson.types.ObjectId] =
+    instance(new BsonObjectId(_))
 
+  implicit def encodeOption[A](implicit encA: BsonEncoder[A]): BsonEncoder[Option[A]] =
+    instance {
+      case Some(v) => encA(v)
+      case None    => org.bson.BsonNull.VALUE
+    }
+
+  implicit def encodeSeq[L[_] <: Seq[_], A](implicit encA: BsonEncoder[A]): BsonEncoder[L[A]] =
+    instance {
+      case asSeq: Seq[A] @unchecked =>
+        val arrayList = new java.util.ArrayList[BsonValue](asSeq.size)
+        asSeq.foreach(a => arrayList.add(encA(a)))
+        new BsonArray(arrayList)
+      case _ => throw new Throwable("Not a Seq")
+    }
+
+  implicit def tuple2BsonEncoder[A, B](implicit encA: BsonEncoder[A], encB: BsonEncoder[B]): BsonEncoder[(A, B)] =
+    instance { case (a, b) => new BsonArray(java.util.List.of(encA(a), encB(b))) }
 }

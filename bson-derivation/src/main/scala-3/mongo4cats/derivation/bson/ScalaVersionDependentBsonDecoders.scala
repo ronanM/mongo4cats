@@ -16,20 +16,21 @@
 
 package mongo4cats.derivation.bson
 
-import org.bson.BsonValue
+import cats.syntax.all._
+import mongo4cats.derivation.bson.BsonDecoder.instance
+import org.bson.BsonArray
 
-/** A type class that provides a way to produce a value of type `A` from a [[org.bson.BsonValue]] value. */
-trait BsonDecoder[A] {
+import scala.jdk.CollectionConverters._
+import java.time.Instant
+import scala.collection.Factory
+import scala.util.Try
 
-  /** Decode the given [[org.bson.BsonValue]]. */
-  def apply(bson: BsonValue): BsonDecoder.Result[A]
-}
+trait ScalaVersionDependentBsonDecoders {
 
-object BsonDecoder {
+  implicit def iterableBsonDecoder[L[_], A](implicit decA: BsonDecoder[A], factory: Factory[A, L[A]]): BsonDecoder[L[A]] =
+    instance {
+      case vs: BsonArray => vs.getValues.asScala.toList.traverse(decA(_)).map(_.to(factory))
+      case other         => new Throwable(s"Not a Iterable: ${other}").asLeft
+    }
 
-  type Result[A] = Either[Throwable, A]
-
-  def apply[A](implicit ev: BsonDecoder[A]): BsonDecoder[A] = ev
-
-  def instance[A](f: BsonValue => Either[Throwable, A]): BsonDecoder[A] = f(_)
 }

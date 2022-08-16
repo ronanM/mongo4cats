@@ -16,4 +16,4 @@
 
 package mongo4cats.derivation.bson
 
-class DerivationError(message: String) extends Exception(message)
+class BsonDerivationError(message: String) extends Exception(message)

@@ -41,7 +41,7 @@ import java.time.Instant
 import scala.collection.Iterable
 import scala.util.Try
 
-trait ScalaVersionDependentEncoder {
+trait ScalaVersionDependentBsonEncoders {
 
   implicit final def encodeIterable[L[_] <: Iterable[_], A](implicit encA: BsonEncoder[A]): BsonEncoder[L[A]] =
     instance {

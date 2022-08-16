@@ -34,21 +34,19 @@ package mongo4cats.derivation.bson
 
 import cats.syntax.all._
 import mongo4cats.derivation.bson.BsonEncoder.instance
-import org.bson.BsonValue
-import org.bson.BsonArray
+import org.bson.{BsonArray, BsonValue}
 
 import scala.jdk.CollectionConverters._
 import java.time.Instant
 import scala.collection.Iterable
-import scala.collection.generic.CanBuildFrom
 import scala.util.Try
 
-trait ScalaVersionDependentEncoder {
+trait ScalaVersionDependentBsonEncoders {
 
   implicit final def encodeIterable[L[_] <: Iterable[_], A](implicit encA: BsonEncoder[A]): BsonEncoder[L[A]] =
     instance {
       case asIt: Iterable[A] @unchecked =>
-        val arrayList = new java.util.ArrayList[BsonValue]()
+        val arrayList = new java.util.ArrayList[BsonValue](Math.max(0, asIt.knownSize))
         asIt.foreach(a => arrayList.add(encA(a)))
         new BsonArray(arrayList)
       case _ => throw new Throwable("Not an Iterable")

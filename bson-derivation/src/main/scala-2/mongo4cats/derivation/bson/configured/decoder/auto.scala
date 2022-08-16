@@ -16,7 +16,6 @@
 
 package mongo4cats.derivation.bson.configured.decoder
 
-import io.circe.Decoder
 import mongo4cats.derivation.bson.{BsonDecoder, MagnoliaBsonDecoder}
 import mongo4cats.derivation.bson.configured.Configuration
 import magnolia1.{CaseClass, Magnolia, SealedTrait}

@@ -17,47 +17,27 @@
 package mongo4cats.derivation.bson
 
 import mongo4cats.AsJava
-import org.bson.{BsonArray, BsonValue}
+import org.bson.BsonValue
 
 /** A type class that provides a conversion from a value of type `A` to a [[BsonValue]] value. */
 trait BsonEncoder[A] extends Serializable with AsJava { self =>
 
-  /** Convert a value to JSON. */
+  /** Convert a value to BsonValue. */
   def apply(a: A): BsonValue
 
   /** Create a new [[BsonEncoder]] by applying a function to a value of type `B` before encoding as an `A`. */
-  final def contramap[B](f: B => A): BsonEncoder[B] = new BsonEncoder[B] {
-    final def apply(a: B): BsonValue = self(f(a))
-  }
+  final def contramap[B](f: B => A): BsonEncoder[B] =
+    (a: B) => self(f(a))
 
   /** Create a new [[BsonEncoder]] by applying a function to the output of this one.
     */
-  final def mapJson(f: BsonValue => BsonValue): BsonEncoder[A] = new BsonEncoder[A] {
-    final def apply(a: A): BsonValue = f(self(a))
-  }
+  final def mapBsonValue(f: BsonValue => BsonValue): BsonEncoder[A] =
+    (a: A) => f(self(a))
 }
 
-object BsonEncoder extends ScalaVersionDependentEncoder with MidBsonEncoder with AsJava {
+object BsonEncoder {
 
   def apply[A](implicit ev: BsonEncoder[A]): BsonEncoder[A] = ev
 
-  def instance[A](f: A => BsonValue): BsonEncoder[A] = (a: A) => f(a)
-
-  implicit final def encodeOption[A](implicit encA: BsonEncoder[A]): BsonEncoder[Option[A]] =
-    instance {
-      case Some(v) => encA(v)
-      case None    => org.bson.BsonNull.VALUE
-    }
-
-  implicit final def encodeSeq[L[_] <: Seq[_], A](implicit encA: BsonEncoder[A]): BsonEncoder[L[A]] =
-    instance {
-      case asSeq: Seq[A] @unchecked =>
-        val arrayList = new java.util.ArrayList[BsonValue](asSeq.size)
-        asSeq.foreach(a => arrayList.add(encA(a)))
-        new BsonArray(arrayList)
-      case _ => throw new Throwable("Not a Seq")
-    }
-
-  implicit final def tuple2BsonEncoder[A, B](implicit encA: BsonEncoder[A], encB: BsonEncoder[B]): BsonEncoder[(A, B)] =
-    instance { case (a, b) => new BsonArray(java.util.List.of(encA(a), encB(b))) }
+  def instance[A](f: A => BsonValue): BsonEncoder[A] = f(_)
 }

@@ -22,14 +22,15 @@ import org.bson.BsonArray
 
 import scala.jdk.CollectionConverters._
 import java.time.Instant
-import scala.collection.Factory
+import scala.collection.Iterable
+import scala.collection.generic.CanBuildFrom
 import scala.util.Try
 
-trait ScalaVersionDependentDecoder {
+trait ScalaVersionDependentBsonDecoders {
 
-  implicit def iterableBsonDecoder[L[_], A](implicit decA: BsonDecoder[A], factory: Factory[A, L[A]]): BsonDecoder[L[A]] =
+  implicit def iterableBsonDecoder[L[_], A](implicit decA: BsonDecoder[A], cbf: CanBuildFrom[Nothing, A, L[A]]): BsonDecoder[L[A]] =
     instance {
-      case vs: BsonArray => vs.getValues.asScala.toList.traverse(decA(_)).map(_.to(factory))
+      case vs: BsonArray => vs.getValues.asScala.toList.traverse(decA(_)).map(_.to[L])
       case other         => new Throwable(s"Not a Iterable: ${other}").asLeft
     }
 

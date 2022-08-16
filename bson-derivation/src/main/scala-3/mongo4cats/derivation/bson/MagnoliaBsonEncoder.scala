@@ -34,7 +34,7 @@ private[bson] object MagnoliaBsonEncoder {
       }.toMap
 
     if (paramJsonKeyLookup.values.toList.distinct.size != caseClass.params.length) {
-      throw new DerivationError(
+      throw new BsonDerivationError(
         "Duplicate key detected after applying transformation function for case class parameters"
       )
     }
@@ -65,7 +65,7 @@ private[bson] object MagnoliaBsonEncoder {
       val origTypeNames = sealedTrait.subtypes.map(_.typeInfo.short)
       val transformed   = origTypeNames.map(config.transformConstructorNames).distinct
       if (transformed.length != origTypeNames.length) {
-        throw new DerivationError(
+        throw new BsonDerivationError(
           "Duplicate key detected after applying transformation function for " +
             "sealed trait child classes"
         )

@@ -16,21 +16,8 @@
 
 package mongo4cats.derivation.bson
 
-import cats.syntax.all._
-import mongo4cats.derivation.bson.BsonDecoder.instance
-import org.bson.BsonArray
+import mongo4cats.AsJava
 
-import scala.jdk.CollectionConverters._
-import java.time.Instant
-import scala.collection.Factory
-import scala.util.Try
+trait AllBsonEncoders extends ScalaVersionDependentBsonEncoders with MidBsonEncoder with AsJava
 
-trait ScalaVersionDependentDecoder {
-
-  implicit def iterableBsonDecoder[L[_], A](implicit decA: BsonDecoder[A], factory: Factory[A, L[A]]): BsonDecoder[L[A]] =
-    instance {
-      case vs: BsonArray => vs.getValues.asScala.toList.traverse(decA(_)).map(_.to(factory))
-      case other         => new Throwable(s"Not a Iterable: ${other}").asLeft
-    }
-
-}
+object AllBsonEncoders extends AllBsonEncoders

@@ -40,7 +40,7 @@ private[bson] object MagnoliaBsonDecoder {
     // println(paramJsonKeyLookup)
 
     if (paramJsonKeyLookup.values.toList.distinct.length != caseClass.parameters.length) {
-      throw new DerivationError("Duplicate key detected after applying transformation function for case class parameters")
+      throw new BsonDerivationError("Duplicate key detected after applying transformation function for case class parameters")
     }
 
     if (configuration.useDefaults) {
@@ -105,7 +105,7 @@ private[bson] object MagnoliaBsonDecoder {
       sealedTrait.subtypes.map(s => configuration.transformConstructorNames(s.typeName.short) -> s).toMap
 
     if (constructorLookup.size != sealedTrait.subtypes.length) {
-      throw new DerivationError("Duplicate key detected after applying transformation function for case class parameters")
+      throw new BsonDerivationError("Duplicate key detected after applying transformation function for case class parameters")
     }
 
     configuration.discriminator match {

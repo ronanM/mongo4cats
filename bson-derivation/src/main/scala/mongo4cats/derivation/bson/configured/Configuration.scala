@@ -18,10 +18,10 @@ package mongo4cats.derivation.bson.configured
 
 import java.util.regex.Pattern
 
-/** Configuration allowing customisation of the JSON produced when encoding, or expected when decoding.
+/** Configuration allowing customisation of the BSON produced when encoding, or expected when decoding.
   *
   * @param transformMemberNames
-  *   Transforms the names of any case class members in the JSON allowing, for example, formatting or case changes. If there are collisions
+  *   Transforms the names of any case class members in the BSON allowing, for example, formatting or case changes. If there are collisions
   *   in transformed member names, an exception will be thrown during derivation (runtime)
   * @param useDefaults
   *   Whether to allow default values as specified for any case-class members.
@@ -30,7 +30,7 @@ import java.util.regex.Pattern
   *   not given, the name is instead stored as a key under which the contents of the ADT are stored as an object. If the discriminator
   *   conflicts with any of the keys of a case class, an exception will be thrown during derivation (runtime)
   * @param transformConstructorNames
-  *   Transforms the value of any constructor names in the JSON allowing, for example, formatting or case changes. If there are collisions
+  *   Transforms the value of any constructor names in the BSON allowing, for example, formatting or case changes. If there are collisions
   *   in transformed constructor names, an exception will be thrown during derivation (runtime)
   */
 final case class Configuration(
@@ -61,7 +61,7 @@ final case class Configuration(
 
 object Configuration {
 
-  val default: Configuration       = Configuration(Predef.identity, Predef.identity, false, None)
+  val default: Configuration       = Configuration(identity, identity, false, None)
   private val basePattern: Pattern = Pattern.compile("([A-Z]+)([A-Z][a-z])")
   private val swapPattern: Pattern = Pattern.compile("([a-z\\d])([A-Z])")
 
