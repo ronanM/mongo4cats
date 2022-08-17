@@ -18,7 +18,8 @@ package mongo4cats.derivation.bson.configured.encoder
 
 import cats.syntax.all._
 import io.circe.generic.extras.auto._
-import io.circe.{Encoder, Json, ParsingFailure}
+import io.circe.{Decoder, Json, ParsingFailure}
+import io.circe.syntax._
 import mongo4cats.circe._
 import mongo4cats.derivation.bson.AllBsonEncoders._
 import mongo4cats.derivation.bson.AllBsonDecoders._
@@ -75,16 +76,16 @@ object TestSealedTrait {
   ) extends TestSealedTrait
   final case class CC2(
       uuid: UUID,
-      int: Option[Int] = 44.some,
+      int: Option[Int] = 3.some,
       long: Long
   ) extends TestSealedTrait
   final case class CC3(
       byte: Byte,
       short: Short,
-      int: Option[Int] = 42.some,
+      int: Option[Int] = 5.some,
       tuple2: (Long, Int),
       tuple2Opt: Option[(String, Int)],
-      tuple2OptWithDefault: Option[(String, Int)] = ("ten", 42).some
+      tuple2OptWithDefault: Option[(String, Int)] = ("ten", 10).some
   ) extends TestSealedTrait
 }
 
@@ -97,17 +98,13 @@ class AutoDerivationTest extends AnyWordSpec with ScalaCheckDrivenPropertyChecks
     Arbitrary(Gen.choose(0, 5).flatMap(Gen.stringOfN(_, Gen.alphaChar)))
 
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
-    PropertyCheckConfiguration(minSuccessful = 1000)
+    PropertyCheckConfiguration(minSuccessful = 2000)
 
   "Derived direct Encode/Decode ADT to org.bson.BsonValue with same result as using mongo4cats.circe with io.circe.generic.extras.auto" in {
-    val PRINTLN = false
-
-    val prefix = "\n\n\n"
 
     val transformationGen: Gen[String => String] = Gen.oneOf(
       Seq(
         identity[String](_),
-        // (_: String).toUpperCase,
         mongo4cats.derivation.bson.configured.Configuration.kebabCaseTransformation,
         mongo4cats.derivation.bson.configured.Configuration.snakeCaseTransformation
       )
@@ -118,17 +115,12 @@ class AutoDerivationTest extends AnyWordSpec with ScalaCheckDrivenPropertyChecks
         transformationGen,
         transformationGen,
         Gen.oneOf(false, true)
-        // Gen.option(Gen.stringOfN(5, Gen.alphaLowerChar))
+        // Gen.option(Gen.stringOfN(5, Gen.alphaLowerChar)) // TODO Fix discriminator.
       ).mapN(mongo4cats.derivation.bson.configured.Configuration(_, _, _, none))
 
     forAll(Arbitrary.arbitrary[RootTestData], bsonConfigurationGen, Gen.oneOf(false, true)) {
       case (testData, bsonConfiguration, dropNulls) =>
-        // println(bsonConfigurationGen)
-
         implicit val bsonConf: mongo4cats.derivation.bson.configured.Configuration = bsonConfiguration
-
-        val bsonEncoder: BsonEncoder[RootTestData] = BsonEncoder[RootTestData]
-        val bsonDecoder: BsonDecoder[RootTestData] = BsonDecoder[RootTestData]
 
         implicit val circeConf: io.circe.generic.extras.Configuration =
           io.circe.generic.extras.Configuration(
@@ -138,42 +130,28 @@ class AutoDerivationTest extends AnyWordSpec with ScalaCheckDrivenPropertyChecks
             discriminator = bsonConf.discriminator
           )
 
-        val jsonEncoder: Encoder[RootTestData] = Encoder[RootTestData]
-
         // --- Encode ---
-        // if (PRINTLN) println(s"\n---\nScala: $p")
-        if (PRINTLN) println("\n" * 10 + "-----------------------------------")
-        val circeJson: Json      = jsonEncoder(testData)
-        val circeJsonStr: String = circeJson.noSpaces
-        if (PRINTLN) println(s"${prefix}With Circe: $circeJsonStr")
-
-        val bsonDoc: BsonDocument = bsonEncoder(testData).asInstanceOf[BsonDocument]
-        if (PRINTLN) println(s"${prefix}With Bson    : $bsonDoc")
-
-        val bsonStr: String = bsonDoc.toJson().replace("\": ", "\":").replace(", ", ",")
-        if (PRINTLN) println(s"${prefix}Bson Str: $bsonStr\n---\nJson Str: $circeJsonStr")
+        val circeJson: Json       = testData.asJson
+        val circeJsonStr: String  = circeJson.noSpaces
+        val bsonDoc: BsonDocument = BsonEncoder[RootTestData].apply(testData).asInstanceOf[BsonDocument]
+        val bsonStr: String       = bsonDoc.toJson().replace("\": ", "\":").replace(", ", ",")
         assert(
           bsonStr == circeJsonStr,
-          s"""|, 10) Json String from Bson != Json String from Circe
+          s"""|, 1) Json String from Bson != Json String from Circe
             |Bson: $bsonStr
             |Json: $circeJsonStr""".stripMargin
         )
 
         // --- Decode ---
-        val jsonFromBsonStrEither: Either[ParsingFailure, Json] = io.circe.parser.parse(bsonStr)
-        if (PRINTLN) println(s"${prefix}Bson -> Json, then parsed with Circe: ${jsonFromBsonStrEither.map(_.noSpaces)}")
-        if (PRINTLN) println(s"${prefix}Circe Json                          : ${circeJsonStr.asRight}")
+        val jsonFromBsonStr: Either[ParsingFailure, Json] = io.circe.parser.parse(bsonStr)
+        assert(jsonFromBsonStr.isRight, ", 2) BsonStr Can't be Circe Json Decoded")
+        assert(jsonFromBsonStr == circeJson.asRight, ", 3) BsonStr Circe Json Decoded != Circe Json Encoded")
 
-        assert(jsonFromBsonStrEither.isRight, ", 20) Can't be JsonDecoded")
-        assert(jsonFromBsonStrEither == circeJson.asRight, ", 30) Json Decoded != Circe Json Encoded")
-
-        val decodedFromBsonEither = bsonDecoder(if (dropNulls) bsonDoc.deepDropNullValues else bsonDoc)
-        val expected              = (if (circeConf.useDefaults || dropNulls) circeJson.deepDropNullValues else circeJson).as[RootTestData]
-
-        if (PRINTLN) println(s"${prefix}    Bson Decoded: $decodedFromBsonEither")
-        if (PRINTLN) println(s"${prefix}Expected Decoded: $expected")
-
-        assert(decodedFromBsonEither == expected, ", 40) BsonDecoder != Circe Decoder")
+        val expected: Decoder.Result[RootTestData] =
+          (if (circeConf.useDefaults || dropNulls) circeJson.deepDropNullValues else circeJson).as[RootTestData]
+        val decodedFromBson: BsonDecoder.Result[RootTestData] =
+          BsonDecoder[RootTestData].apply(if (dropNulls) bsonDoc.deepDropNullValues else bsonDoc)
+        assert(decodedFromBson == expected, ", 4) Bson Decoder != Circe Decoder")
     }
   }
 }
