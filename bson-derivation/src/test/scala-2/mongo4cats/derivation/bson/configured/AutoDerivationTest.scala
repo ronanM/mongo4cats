@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package mongo4cats.derivation.bson.configured.encoder
+package mongo4cats.derivation.bson.configured
 
 import cats.syntax.all._
 import io.circe.generic.extras.auto._

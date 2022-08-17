@@ -18,11 +18,9 @@ package mongo4cats.derivation.bson.derivation.decoder
 
 import mongo4cats.derivation.bson.{BsonDecoder, MagnoliaBsonDecoder}
 import mongo4cats.derivation.bson.configured.Configuration
-import magnolia1.{CaseClass, SealedTrait}
+import magnolia1.*
 
-object auto {
-
-  type Typeclass[T] = BsonDecoder[T]
+object auto extends AutoDerivation[BsonDecoder] {
 
   def join[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] =
     MagnoliaBsonDecoder.join(caseClass)(Configuration.default)
@@ -30,5 +28,4 @@ object auto {
   def split[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] =
     MagnoliaBsonDecoder.split(sealedTrait)(Configuration.default)
 
-  // given magnoliaBsonDecoder[T]: Typeclass[T] = BsonDecoder.derived
 }
